@@ -1,0 +1,9 @@
+heating,3.50
+wood,20.00
+family,7.00
+familyKids,7.00
+guests,12.00
+guestKids,10.00
+cleaning,50.00
+kidsParentRoom,0.00
+date,12.05.2026
