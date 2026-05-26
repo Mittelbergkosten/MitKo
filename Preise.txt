@@ -1,5 +1,5 @@
 heating,3.50
-wood,15.00
+wood,20.00
 family,7.00
 familyKids,7.00
 guests,12.00
