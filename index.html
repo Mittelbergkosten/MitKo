@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MitKo</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        :root {
+            --bg:#0f0f0f;--surface:#181818;--surface2:#222222;--border:#2e2e2e;
+            --accent:#7c5cfc;--accent-dim:#3d2e7a;--text:#f0f0f0;--text-muted:#888;
+            --danger:#ff4d4f;--success:#52c41a;--warn:#f5a623;
+            --radius:12px;--radius-sm:8px;
+        }
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+        #app{width:100%;max-width:480px;}
+        .app-header{text-align:center;margin-bottom:24px;position:relative;}
+        .app-header h1{font-size:28px;font-weight:600;letter-spacing:-0.5px;}
+        .app-header .subtitle{font-size:13px;color:var(--text-muted);margin-top:4px;}
+        .btn-admin{position:absolute;top:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-muted);font-size:11px;font-weight:500;padding:5px 10px;cursor:pointer;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s;}
+        .btn-admin:hover{border-color:var(--accent);color:var(--accent);}
+        /* Admin styles */
+        .admin-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:14px;}
+        .admin-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+        .admin-price-grid{display:grid;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:4px;}
+        .admin-price-row{display:grid;grid-template-columns:1fr auto 80px;align-items:center;background:var(--surface);padding:9px 12px;gap:10px;transition:background 0.15s;}
+        .admin-price-row:hover{background:var(--surface2);}
+        .admin-price-row.changed{background:rgba(245,166,35,0.08);}
+        .admin-price-label{font-size:13px;}
+        .admin-price-unit{font-size:11px;color:var(--text-muted);white-space:nowrap;}
+        .admin-price-input{text-align:right;padding:5px 8px!important;font-size:13px!important;font-family:'DM Mono',monospace;}
+        .admin-date-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--border);margin-top:2px;}
+        .admin-date-label{font-size:12px;color:var(--text-muted);flex:1;}
+        .btn-today{font-size:11px;padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text-muted);}
+        .btn-today:hover{color:var(--text);border-color:var(--accent);}
+        .admin-notice{padding:10px 12px;border-radius:var(--radius-sm);font-size:12px;line-height:1.5;margin-bottom:10px;}
+        .admin-notice.success{background:rgba(82,196,26,0.08);color:var(--success);border-left:3px solid var(--success);}
+        .admin-notice.error{background:rgba(255,77,79,0.08);color:var(--danger);border-left:3px solid var(--danger);}
+        .admin-notice.warn{background:rgba(245,166,35,0.08);color:var(--warn);border-left:3px solid var(--warn);}
+        .admin-notice.info{background:rgba(124,92,252,0.08);color:var(--accent);border-left:3px solid var(--accent);}
+        .admin-preview{font-family:'DM Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--surface2);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);line-height:1.8;white-space:pre;}
+        .spinner{display:inline-block;width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+        .step-progress{display:flex;gap:6px;margin-bottom:24px;justify-content:center;}
+        .step-dot{width:28px;height:4px;border-radius:2px;background:var(--border);transition:background 0.3s;}
+        .step-dot.active{background:var(--accent);}
+        .step-dot.done{background:var(--accent-dim);}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;animation:fadeIn 0.25s ease;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+        .card h2{font-size:20px;font-weight:600;margin-bottom:8px;letter-spacing:-0.3px;}
+        .card p.desc{font-size:14px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;}
+        label{display:block;font-size:13px;font-weight:500;color:var(--text-muted);margin-bottom:6px;margin-top:16px;text-transform:uppercase;letter-spacing:0.5px;}
+        input[type="text"],input[type="number"],input[type="date"],select{width:100%;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:inherit;font-size:15px;transition:border-color 0.2s,box-shadow 0.2s;outline:none;appearance:none;}
+        input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,252,0.15);}
+        input::placeholder{color:var(--text-muted);}
+        .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border:none;border-radius:var(--radius-sm);font-family:inherit;font-size:15px;font-weight:500;cursor:pointer;transition:all 0.2s;width:100%;margin-top:20px;}
+        .btn-primary{background:var(--accent);color:white;}
+        .btn-primary:hover:not(:disabled){background:#6a4de8;}
+        .btn-primary:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
+        .btn-secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+        .btn-secondary:hover{border-color:var(--accent);}
+        .btn-pdf{background:#1a7f4b;color:white;}
+        .btn-pdf:hover:not(:disabled){background:#166b3e;}
+        .btn-pdf:disabled,.btn-share:disabled{background:var(--border);color:var(--text-muted);cursor:not-allowed;}
+        .btn-share{background:#1a5fa8;color:white;}
+        .btn-share:hover:not(:disabled){background:#154d8a;}
+        .btn-row{display:flex;flex-direction:column-reverse;gap:10px;margin-top:28px;}
+        .btn-row .btn{margin-top:0;}
+        .counter-group{margin-top:12px;}
+        .counter-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+        .counter-row:last-child{border-bottom:none;}
+        .counter-label{flex:1;font-size:14px;}
+        .counter-controls{display:flex;align-items:center;gap:8px;}
+        .btn-counter{width:32px;height:32px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;flex-shrink:0;}
+        .btn-counter:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+        .btn-counter:disabled{opacity:0.35;cursor:not-allowed;}
+        .counter-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;min-width:28px;text-align:center;}
+        .info-row{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface2);border-radius:var(--radius-sm);margin-top:12px;font-size:14px;}
+        .info-row .info-val{font-family:'DM Mono',monospace;color:var(--accent);font-size:13px;}
+        .attendance-category{margin-top:16px;}
+        .attendance-category h3{font-size:13px;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+        .summary-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px;}
+        .summary-row:last-child{border-bottom:none;}
+        .summary-row .label{color:var(--text-muted);}
+        .summary-row .value{font-weight:500;}
+        .summary-row .value.modified{color:var(--warn);}
+        table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+        thead tr{background:var(--surface2);}
+        th{padding:10px 12px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-muted);border-bottom:1px solid var(--border);}
+        td{padding:10px 12px;border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;font-size:13px;}
+        td:first-child{font-family:'DM Sans',sans-serif;}
+        .total-row td{font-weight:600;color:var(--accent);border-top:2px solid var(--border);border-bottom:none;}
+        .subtotal-row td{font-weight:600;background:var(--surface2);color:var(--text-muted);border-top:1px solid var(--border);}
+        .modified-row td{color:var(--warn)!important;}
+        .modified-badge{font-size:10px;background:rgba(245,166,35,0.15);color:var(--warn);border-radius:4px;padding:1px 5px;margin-left:6px;font-family:'DM Sans',sans-serif;vertical-align:middle;}
+        .section-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin:24px 0 8px;}
+        .extra-charge-row{display:flex;gap:8px;margin-top:8px;}
+        .extra-charge-row input:first-child{flex:2;}
+        .extra-charge-row input:last-child{flex:1;}
+        /* Sonstige Posten */
+        .posten-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+        .posten-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);}
+        .posten-kosten{background:rgba(82,196,26,0.05);border-color:rgba(82,196,26,0.2);}
+        .posten-ausgabe{background:rgba(255,77,79,0.05);border-color:rgba(255,77,79,0.2);}
+        .posten-item-info{display:flex;flex-direction:column;gap:4px;flex:1;}
+        .posten-item-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+        .posten-badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:3px;letter-spacing:0.5px;display:inline-block;}
+        .badge-kosten{background:rgba(82,196,26,0.15);color:var(--success);}
+        .badge-ausgabe{background:rgba(255,77,79,0.12);color:var(--danger);}
+        .posten-desc{font-size:14px;margin-top:2px;}
+        .posten-amount{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;}
+        .amount-plus{color:var(--success);}
+        .amount-minus{color:var(--danger);}
+        .posten-delete{background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;padding:4px 6px;border-radius:4px;transition:all 0.15s;}
+        .posten-delete:hover{background:rgba(255,77,79,0.1);color:var(--danger);}
+        .btn-add-posten{width:100%;padding:16px;background:var(--surface2);border:2px dashed var(--border);border-radius:var(--radius-sm);cursor:pointer;transition:all 0.2s;margin-top:4px;}
+        .btn-add-posten:hover{border-color:var(--accent);background:rgba(124,92,252,0.05);}
+        .btn-add-plus{font-size:24px;color:var(--text-muted);display:block;transition:color 0.2s;}
+        .btn-add-posten:hover .btn-add-plus{color:var(--accent);}
+        /* Modal */
+        .posten-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+        .posten-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px;width:100%;max-width:360px;}
+        .posten-modal-title{font-size:16px;font-weight:600;margin-bottom:16px;}
+        .posten-type-btn{width:100%;display:flex;align-items:center;gap:14px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;margin-bottom:10px;transition:all 0.15s;text-align:left;}
+        .posten-type-btn:hover{border-color:var(--accent);}
+        .posten-type-btn.kosten:hover{border-color:var(--success);background:rgba(82,196,26,0.05);}
+        .posten-type-btn.ausgabe:hover{border-color:var(--danger);background:rgba(255,77,79,0.05);}
+        .type-icon{font-size:22px;font-weight:600;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+        .kosten .type-icon{background:rgba(82,196,26,0.15);color:var(--success);}
+        .ausgabe .type-icon{background:rgba(255,77,79,0.12);color:var(--danger);}
+        .type-label{font-size:15px;font-weight:600;display:block;}
+        .type-desc{font-size:12px;color:var(--text-muted);display:block;margin-top:2px;}
+        .posten-modal-cancel{width:100%;background:none;border:none;color:var(--text-muted);font-size:13px;cursor:pointer;padding:10px;margin-top:4px;}
+        .posten-modal-cancel:hover{color:var(--text);}
+        .chip{display:inline-block;background:var(--accent-dim);color:var(--accent);border-radius:4px;padding:2px 8px;font-size:12px;font-family:'DM Mono',monospace;margin-left:6px;}
+        .warning{font-size:12px;color:var(--danger);margin-top:6px;}
+        .warn-notice{font-size:12px;color:var(--warn);background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.2);border-radius:var(--radius-sm);padding:8px 12px;margin-top:12px;}
+        .legend{font-size:11px;color:var(--text-muted);margin-top:12px;text-align:center;}
+        .price-input-row{display:flex;align-items:center;gap:10px;}
+        .price-input-row input{flex:1;}
+        .price-unit{font-size:13px;color:var(--text-muted);white-space:nowrap;min-width:70px;}
+        .price-modified-hint{font-size:11px;color:var(--warn);margin-top:3px;}
+        .prices-source{font-size:11px;color:var(--text-muted);margin-top:6px;}
+        .prices-source.loaded{color:var(--success);}
+        .prices-source.error{color:var(--danger);}
+    </style>
+</head>
+<body>
+<div id="app">
+    <div class="app-header">
+        <h1>MitKo</h1>
+        <p class="subtitle">Mitbenutzerkostenabrechnung</p>
+        <p class="prices-source" :class="pricesStatus.cls">{{ pricesStatus.msg }}</p>
+        <button class="btn-admin" @click="adminMode=true" v-if="!adminMode">Admin</button>
+    </div>
+    <div class="step-progress" v-if="!adminMode">
+        <div v-for="n in totalSteps" :key="n" :class="['step-dot',step===n?'active':step>n?'done':'']"></div>
+    </div>
+    <div class="card" v-if="!adminMode">
+
+        <!-- Step 1 -->
+        <div v-if="step===1">
+            <h2>Eigentümer</h2>
+            <p class="desc">Willkommen bei MitKo! Bitte gib den abzurechnenden Eigentümer ein.</p>
+            <label for="owner">Name</label>
+            <input type="text" id="owner" v-model.trim="owner" placeholder="Namen eingeben" @keyup.enter="owner&&nextStep()"/>
+            <button class="btn btn-primary" @click="nextStep" :disabled="!owner">Weiter →</button>
+        </div>
+
+        <!-- Step 2 -->
+        <div v-if="step===2">
+            <h2>Aufenthalt</h2>
+            <p class="desc">Willkommen, {{ owner }}! Bitte gib die folgenden Informationen ein.</p>
+            <label for="arrival">Ankunftsdatum</label>
+            <input type="date" id="arrival" v-model="arrivalDate"/>
+            <label for="departure">Abfahrtsdatum</label>
+            <input type="date" id="departure" v-model="departureDate" :min="arrivalDate"/>
+            <p class="warning" v-if="arrivalDate&&departureDate&&days<=0">⚠ Abfahrtsdatum muss nach dem Ankunftsdatum liegen.</p>
+            <label for="heatingStart">Heizungsstand bei Ankunft (Stunden)</label>
+            <input type="number" id="heatingStart" v-model.number="heatingStart" min="0" placeholder="z.B. 1250"/>
+            <label for="heatingEnd">Heizungsstand bei Abfahrt (Stunden)</label>
+            <input type="number" id="heatingEnd" v-model.number="heatingEnd" min="0" placeholder="z.B. 1280"/>
+            <div v-if="days>0" class="info-row"><span>Abrechnungstage</span><span class="info-val">{{ days }} Tage</span></div>
+            <div v-if="heatingHours!==null&&heatingHours>=0" class="info-row"><span>Verbrauchte Heizungsstunden</span><span class="info-val">{{ heatingHours }} Std.</span></div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-primary" @click="nextStep" :disabled="!datesValid">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div v-if="step===3">
+            <h2>Personen</h2>
+            <p class="desc">{{ owner }}, bitte gib die Anzahl der Besucher ein.</p>
+            <div class="counter-group">
+                <div v-for="(value,key) in people" :key="key" class="counter-row">
+                    <span class="counter-label">{{ key }}</span>
+                    <div class="counter-controls">
+                        <button class="btn-counter" @click="decrease(key)" :disabled="people[key]===0">−</button>
+                        <span class="counter-value">{{ people[key] }}</span>
+                        <button class="btn-counter" @click="increase(key)">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="info-row" style="margin-top:16px;"><span>Gesamtpersonen</span><span class="info-val">{{ totalVisitors }}</span></div>
+            <div class="btn-row">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-primary" @click="nextStep">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div v-if="step===4">
+            <h2>Anwesenheitsliste</h2>
+            <p class="desc">{{ owner }}, du kannst hier optional die Namen der anwesenden Personen angeben.</p>
+            <template v-for="(count,category) in people" :key="category">
+                <div v-if="count>0" class="attendance-category">
+                    <h3>{{ category }} <span class="chip">{{ count }}</span></h3>
+                    <div v-for="n in count" :key="category+n" style="margin-top:6px;">
+                        <input type="text" v-model="attendance[category][n-1]" :placeholder="`Person ${n} (optional)`"/>
+                    </div>
+                </div>
+            </template>
+            <p class="desc" v-if="totalVisitors===0" style="margin-top:12px;">Keine Personen eingetragen — dieser Schritt kann übersprungen werden.</p>
+            <div class="btn-row">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-primary" @click="nextStep">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div v-if="step===5">
+            <h2>Verbrauch</h2>
+            <p class="desc">{{ owner }}, du hast das Haus für {{ days }} Tage genutzt.</p>
+            <label>Verbrauchte Holzkörbe</label>
+            <div class="counter-row" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;margin-top:4px;">
+                <span class="counter-label">Holzkörbe</span>
+                <div class="counter-controls">
+                    <button class="btn-counter" @click="decreaseWood" :disabled="woodConsumption===0">−</button>
+                    <span class="counter-value">{{ woodConsumption }}</span>
+                    <button class="btn-counter" @click="increaseWood">+</button>
+                </div>
+            </div>
+            <label for="cleaning" style="margin-top:20px;">Endreinigung berechnen?</label>
+            <select id="cleaning" v-model="cleaning">
+                <option :value="true">Ja</option>
+                <option :value="false">Nein</option>
+            </select>
+            <div class="btn-row">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-primary" @click="nextStep">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div v-if="step===6">
+            <h2>Sonstige Posten</h2>
+            <p class="desc">{{ owner }}, bitte gib hier zusätzlich zu berechnende Posten oder Ausgaben ein.</p>
+
+            <!-- Eintrags-Liste -->
+            <div v-if="posten.length > 0" class="posten-list">
+                <div v-for="(p, index) in posten" :key="index" class="posten-item" :class="p.typ==='ausgabe'?'posten-ausgabe':'posten-kosten'">
+                    <div class="posten-item-info">
+                        <span class="posten-badge" :class="p.typ==='ausgabe'?'badge-ausgabe':'badge-kosten'">
+                            {{ p.typ==='ausgabe' ? '− Ausgabe' : '+ Kosten' }}
+                        </span>
+                        <span class="posten-desc">{{ p.description }}</span>
+                    </div>
+                    <div class="posten-item-right">
+                        <span class="posten-amount" :class="p.typ==='ausgabe'?'amount-minus':'amount-plus'">
+                            {{ p.typ==='ausgabe' ? '−' : '+' }} {{ formatEur(p.amount) }} €
+                        </span>
+                        <button class="posten-delete" @click="deletePosten(index)" title="Löschen">✕</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plus Button -->
+            <button class="btn-add-posten" @click="openPostenModal">
+                <span class="btn-add-plus">+</span>
+            </button>
+
+            <!-- Modal -->
+            <div class="posten-modal-bg" v-if="postenModal.open" @click.self="closePostenModal">
+                <div class="posten-modal">
+                    <!-- Schritt 1: Typ wählen -->
+                    <div v-if="postenModal.step===1">
+                        <p class="posten-modal-title">Was möchtest du hinzufügen?</p>
+                        <button class="posten-type-btn kosten" @click="selectPostenTyp('kosten')">
+                            <span class="type-icon">+</span>
+                            <span class="type-label">Kosten</span>
+                            <span class="type-desc">Wird zum Gesamtbetrag addiert</span>
+                        </button>
+                        <button class="posten-type-btn ausgabe" @click="selectPostenTyp('ausgabe')">
+                            <span class="type-icon">−</span>
+                            <span class="type-label">Ausgabe</span>
+                            <span class="type-desc">Wird vom Gesamtbetrag abgezogen</span>
+                        </button>
+                        <button class="posten-modal-cancel" @click="closePostenModal">Abbrechen</button>
+                    </div>
+
+                    <!-- Schritt 2: Details eingeben -->
+                    <div v-if="postenModal.step===2">
+                        <p class="posten-modal-title">
+                            <span class="posten-badge" :class="postenModal.typ==='ausgabe'?'badge-ausgabe':'badge-kosten'" style="margin-right:6px;">
+                                {{ postenModal.typ==='ausgabe' ? '− Ausgabe' : '+ Kosten' }}
+                            </span>
+                            Details eingeben
+                        </p>
+                        <label style="margin-top:12px;">Beschreibung</label>
+                        <input type="text" v-model="postenModal.description" placeholder="z.B. Toilettenpapier, Reparatur..." ref="postenDesc"/>
+                        <label style="margin-top:12px;">Betrag (€)</label>
+                        <input type="number" v-model.number="postenModal.amount" placeholder="0.00" min="0" step="0.50"/>
+                        <p class="warning" v-if="postenModal.showError">Bitte Beschreibung und Betrag angeben.</p>
+                        <div style="display:flex;gap:8px;margin-top:16px;">
+                            <button class="btn btn-secondary" @click="postenModal.step=1" style="margin-top:0;flex:1;">← Zurück</button>
+                            <button class="btn btn-primary" @click="savePosten" style="margin-top:0;flex:2;">Speichern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-row" style="margin-top:20px;">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-primary" @click="nextStep">Weiter →</button>
+            </div>
+        </div>
+
+        <!-- Preise bearbeiten (Overlay) -->
+        <div v-if="editingPrices">
+            <h2>Preise bearbeiten</h2>
+            <p class="desc">Passe die Preise an. Änderungen werden in der Auswertung und im PDF gekennzeichnet.</p>
+            <label>Heizung (pro Std.)</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.heating" min="0" step="0.50"/><span class="price-unit">€ / Std.</span></div>
+            <p v-if="prices.heating!==defaultPrices.heating" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.heating) }} €)</p>
+            <label>Holzkorb</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.wood" min="0" step="1"/><span class="price-unit">€ / Stück</span></div>
+            <p v-if="prices.wood!==defaultPrices.wood" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.wood) }} €)</p>
+            <label>Endreinigung (Pauschale)</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.cleaning" min="0" step="1"/><span class="price-unit">€</span></div>
+            <p v-if="prices.cleaning!==defaultPrices.cleaning" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.cleaning) }} €)</p>
+            <p class="section-title" style="margin-top:20px;">Übernachtungspreise pro Person / Tag</p>
+            <label>Familie</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.family" min="0" step="0.50"/><span class="price-unit">€ / Tag</span></div>
+            <p v-if="prices.family!==defaultPrices.family" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.family) }} €)</p>
+            <label>Familie Kinder</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.familyKids" min="0" step="0.50"/><span class="price-unit">€ / Tag</span></div>
+            <p v-if="prices.familyKids!==defaultPrices.familyKids" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.familyKids) }} €)</p>
+            <label>Gäste</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.guests" min="0" step="0.50"/><span class="price-unit">€ / Tag</span></div>
+            <p v-if="prices.guests!==defaultPrices.guests" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.guests) }} €)</p>
+            <label>Gäste Kinder</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.guestKids" min="0" step="0.50"/><span class="price-unit">€ / Tag</span></div>
+            <p v-if="prices.guestKids!==defaultPrices.guestKids" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.guestKids) }} €)</p>
+            <label>Kinder im Elternschlafzimmer</label>
+            <div class="price-input-row"><input type="number" v-model.number="prices.kidsParentRoom" min="0" step="0.50"/><span class="price-unit">€ / Tag</span></div>
+            <p v-if="prices.kidsParentRoom!==defaultPrices.kidsParentRoom" class="price-modified-hint">⚠ Geändert (Standard: {{ formatEur(defaultPrices.kidsParentRoom) }} €)</p>
+            <button class="btn btn-primary" @click="editingPrices=false" style="margin-top:24px;">✓ Übernehmen</button>
+        </div>
+
+        <!-- Step 7: Zusammenfassung -->
+        <div v-else-if="step===7">
+            <h2>Zusammenfassung</h2>
+            <p class="desc">Überprüfe alle Daten vor der Auswertung.</p>
+            <div class="summary-row"><span class="label">Eigentümer</span><span class="value">{{ owner }}</span></div>
+            <div class="summary-row"><span class="label">Ankunft</span><span class="value">{{ formatDate(arrivalDate) }}</span></div>
+            <div class="summary-row"><span class="label">Abfahrt</span><span class="value">{{ formatDate(departureDate) }}</span></div>
+            <div class="summary-row"><span class="label">Tage</span><span class="value">{{ days }}</span></div>
+            <div class="summary-row"><span class="label">Heizungsstand Ankunft</span><span class="value">{{ heatingStart }} Std.</span></div>
+            <div class="summary-row"><span class="label">Heizungsstand Abfahrt</span><span class="value">{{ heatingEnd }} Std.</span></div>
+            <div class="summary-row"><span class="label">Verbrauchte Heizstunden</span><span class="value">{{ heatingHours }} Std.</span></div>
+            <div class="summary-row"><span class="label">Holzkörbe</span><span class="value">{{ woodConsumption }}</span></div>
+            <div class="summary-row"><span class="label">Endreinigung</span><span class="value">{{ cleaning?'Ja':'Nein' }}</span></div>
+            <p class="section-title">Personen</p>
+            <div v-for="(count,key) in people" :key="key" class="summary-row">
+                <span class="label">{{ key }}</span><span class="value">{{ count }}</span>
+            </div>
+            <p class="section-title">Aktuelle Preise</p>
+            <div class="info-row" style="margin-bottom:8px;">
+                <span style="font-size:12px;color:var(--text-muted);">Preisstand</span>
+                <span class="info-val" style="font-size:12px;">{{ pricesStatus.msg }}</span>
+            </div>
+            <div class="summary-row"><span class="label">Heizung</span><span class="value" :class="{modified:prices.heating!==defaultPrices.heating}">{{ formatEur(prices.heating) }} € / Std.<span v-if="prices.heating!==defaultPrices.heating" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Holzkorb</span><span class="value" :class="{modified:prices.wood!==defaultPrices.wood}">{{ formatEur(prices.wood) }} € / Stück<span v-if="prices.wood!==defaultPrices.wood" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Endreinigung</span><span class="value" :class="{modified:prices.cleaning!==defaultPrices.cleaning}">{{ formatEur(prices.cleaning) }} €<span v-if="prices.cleaning!==defaultPrices.cleaning" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Familie</span><span class="value" :class="{modified:prices.family!==defaultPrices.family}">{{ formatEur(prices.family) }} € / Tag<span v-if="prices.family!==defaultPrices.family" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Familie Kinder</span><span class="value" :class="{modified:prices.familyKids!==defaultPrices.familyKids}">{{ formatEur(prices.familyKids) }} € / Tag<span v-if="prices.familyKids!==defaultPrices.familyKids" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Gäste</span><span class="value" :class="{modified:prices.guests!==defaultPrices.guests}">{{ formatEur(prices.guests) }} € / Tag<span v-if="prices.guests!==defaultPrices.guests" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Gäste Kinder</span><span class="value" :class="{modified:prices.guestKids!==defaultPrices.guestKids}">{{ formatEur(prices.guestKids) }} € / Tag<span v-if="prices.guestKids!==defaultPrices.guestKids" class="modified-badge">geändert</span></span></div>
+            <div class="summary-row"><span class="label">Kinder Elternzimmer</span><span class="value" :class="{modified:prices.kidsParentRoom!==defaultPrices.kidsParentRoom}">{{ formatEur(prices.kidsParentRoom) }} € / Tag<span v-if="prices.kidsParentRoom!==defaultPrices.kidsParentRoom" class="modified-badge">geändert</span></span></div>
+            <div v-if="pricesModified" class="warn-notice">⚠ Einige Preise wurden für diese Abrechnung manuell angepasst.</div>
+            <template v-if="posten.length>0">
+                <p class="section-title">Sonstige Posten</p>
+                <div v-for="p in posten" :key="p.description" class="summary-row">
+                    <span class="label">
+                        <span class="posten-badge" :class="p.typ==='ausgabe'?'badge-ausgabe':'badge-kosten'" style="margin-right:6px;">{{ p.typ==='ausgabe'?'− Ausgabe':'+ Kosten' }}</span>
+                        {{ p.description }}
+                    </span>
+                    <span class="value" :style="p.typ==='ausgabe'?'color:var(--danger)':'color:var(--success)'">
+                        {{ p.typ==='ausgabe'?'−':'+' }} {{ formatEur(p.amount) }} €
+                    </span>
+                </div>
+            </template>
+            <div class="btn-row" style="margin-top:20px;">
+                <button class="btn btn-secondary" @click="step=1">✎ Daten ändern</button>
+                <button class="btn btn-secondary" @click="editingPrices=true">⚙ Preise bearbeiten</button>
+                <button class="btn btn-primary" @click="nextStep">Auswertung →</button>
+            </div>
+        </div>
+
+        <!-- Step 8: Auswertung -->
+        <div v-else-if="step===8">
+            <h2>Auswertung</h2>
+            <p class="section-title">Abrechnung — Konto: {{ owner }}</p>
+
+            <p class="section-title" style="margin-top:16px;">Verbrauch</p>
+            <table>
+                <thead><tr>
+                    <th>Bezeichnung</th><th style="text-align:right;">Anz.</th>
+                    <th style="text-align:right;">EP (€)</th><th style="text-align:right;">GP (€)</th>
+                </tr></thead>
+                <tbody>
+                    <tr :class="{'modified-row':prices.heating!==defaultPrices.heating}">
+                        <td>Heizung<span v-if="prices.heating!==defaultPrices.heating" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ heatingHours }} Std.</td>
+            <p class="section-title" style="margin-top:16px;">Abrechnung — Konto: {{ owner }}</p>
+
+            <!-- 1. Übernachtung -->
+            <p class="section-title" style="margin-top:16px;">Übernachtung</p>
+            <table>
+                <thead><tr>
+                    <th>Kategorie</th>
+                    <th style="text-align:right;">Menge</th>
+                    <th style="text-align:right;">EP (€)</th>
+                    <th style="text-align:right;">GP (€)</th>
+                </tr></thead>
+                <tbody>
+                    <tr v-if="people['Familie']>0" :class="{'modified-row':prices.family!==defaultPrices.family}">
+                        <td>Familie<span v-if="prices.family!==defaultPrices.family" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ people['Familie'] }} × {{ days }} T.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.family) }}</td>
+                        <td style="text-align:right;">{{ formatEur(people['Familie']*prices.family*days) }}</td>
+                    </tr>
+                    <tr v-if="people['Familie Kinder']>0" :class="{'modified-row':prices.familyKids!==defaultPrices.familyKids}">
+                        <td>Familie Kinder<span v-if="prices.familyKids!==defaultPrices.familyKids" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ people['Familie Kinder'] }} × {{ days }} T.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.familyKids) }}</td>
+                        <td style="text-align:right;">{{ formatEur(people['Familie Kinder']*prices.familyKids*days) }}</td>
+                    </tr>
+                    <tr v-if="people['Gäste']>0" :class="{'modified-row':prices.guests!==defaultPrices.guests}">
+                        <td>Gäste<span v-if="prices.guests!==defaultPrices.guests" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ people['Gäste'] }} × {{ days }} T.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.guests) }}</td>
+                        <td style="text-align:right;">{{ formatEur(people['Gäste']*prices.guests*days) }}</td>
+                    </tr>
+                    <tr v-if="people['Gäste Kinder']>0" :class="{'modified-row':prices.guestKids!==defaultPrices.guestKids}">
+                        <td>Gäste Kinder<span v-if="prices.guestKids!==defaultPrices.guestKids" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ people['Gäste Kinder'] }} × {{ days }} T.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.guestKids) }}</td>
+                        <td style="text-align:right;">{{ formatEur(people['Gäste Kinder']*prices.guestKids*days) }}</td>
+                    </tr>
+                    <tr v-if="people['Kinder im Elternschlafzimmer']>0" :class="{'modified-row':prices.kidsParentRoom!==defaultPrices.kidsParentRoom}">
+                        <td>Kinder Elternzimmer<span v-if="prices.kidsParentRoom!==defaultPrices.kidsParentRoom" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ people['Kinder im Elternschlafzimmer'] }} × {{ days }} T.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.kidsParentRoom) }}</td>
+                        <td style="text-align:right;">{{ formatEur(people['Kinder im Elternschlafzimmer']*prices.kidsParentRoom*days) }}</td>
+                    </tr>
+                    <tr class="subtotal-row">
+                        <td colspan="3">Zwischensumme Übernachtung</td>
+                        <td style="text-align:right;">{{ formatEur(overnightTotal) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 2. Kosten & Ausgaben -->
+            <p class="section-title" style="margin-top:20px;">Kosten & Ausgaben</p>
+            <table>
+                <thead><tr>
+                    <th>Bezeichnung</th>
+                    <th style="text-align:right;">Menge</th>
+                    <th style="text-align:right;">EP (€)</th>
+                    <th style="text-align:right;">GP (€)</th>
+                </tr></thead>
+                <tbody>
+                    <tr v-if="heatingHours>0" :class="{'modified-row':prices.heating!==defaultPrices.heating}">
+                        <td>Heizung<span v-if="prices.heating!==defaultPrices.heating" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ heatingHours }} Std.</td>
+                        <td style="text-align:right;">{{ formatEur(prices.heating) }}</td>
+                        <td style="text-align:right;">{{ formatEur(heatingHours*prices.heating) }}</td>
+                    </tr>
+                    <tr v-if="woodConsumption>0" :class="{'modified-row':prices.wood!==defaultPrices.wood}">
+                        <td>Holzkörbe<span v-if="prices.wood!==defaultPrices.wood" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">{{ woodConsumption }}</td>
+                        <td style="text-align:right;">{{ formatEur(prices.wood) }}</td>
+                        <td style="text-align:right;">{{ formatEur(woodConsumption*prices.wood) }}</td>
+                    </tr>
+                    <tr v-if="cleaning" :class="{'modified-row':prices.cleaning!==defaultPrices.cleaning}">
+                        <td>Endreinigung<span v-if="prices.cleaning!==defaultPrices.cleaning" class="modified-badge">geändert</span></td>
+                        <td style="text-align:right;">1</td>
+                        <td style="text-align:right;">{{ formatEur(prices.cleaning) }}</td>
+                        <td style="text-align:right;">{{ formatEur(prices.cleaning) }}</td>
+                    </tr>
+                    <tr v-for="p in postenKosten" :key="'k'+p.description">
+                        <td>{{ p.description }} <span class="posten-badge badge-kosten">+ Kosten</span></td>
+                        <td style="text-align:right;">—</td>
+                        <td style="text-align:right;">—</td>
+                        <td style="text-align:right;">+{{ formatEur(p.amount) }}</td>
+                    </tr>
+                    <tr v-for="p in postenAusgaben" :key="'a'+p.description">
+                        <td>{{ p.description }} <span class="posten-badge badge-ausgabe">− Ausgabe</span></td>
+                        <td style="text-align:right;">—</td>
+                        <td style="text-align:right;">—</td>
+                        <td style="text-align:right; color:var(--danger);">−{{ formatEur(p.amount) }}</td>
+                    </tr>
+                    <tr class="subtotal-row">
+                        <td colspan="3">Zwischensumme Kosten & Ausgaben</td>
+                        <td style="text-align:right;">{{ formatEur(kostenTotal) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- 3. Gesamtrechnung -->
+            <p class="section-title" style="margin-top:20px;">Gesamtrechnung</p>
+            <table>
+                <tbody>
+                    <tr><td>Übernachtung</td><td style="text-align:right;">{{ formatEur(overnightTotal) }}</td></tr>
+                    <tr><td>Kosten & Ausgaben</td><td style="text-align:right;">{{ formatEur(kostenTotal) }}</td></tr>
+                    <tr class="total-row">
+                        <td><strong>GESAMT</strong></td>
+                        <td style="text-align:right;"><strong>{{ formatEur(totalCost) }}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div v-if="pricesModified" class="warn-notice" style="margin-top:12px;">⚠ Preise wurden für diese Abrechnung manuell angepasst. Geänderte Positionen sind orange markiert.</div>
+
+            <template v-if="totalVisitors>0">
+                <p class="section-title" style="margin-top:28px;">Kosten pro Person</p>
+                <table>
+                    <thead><tr><th>Kategorie</th><th style="text-align:right;">Kosten (€)</th></tr></thead>
+                    <tbody>
+                        <tr v-for="cat in personCosts" :key="cat.label">
+                            <td>{{ cat.label }}</td><td style="text-align:right;">{{ formatEur(cat.cost) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </template>
+
+            <p v-if="formattedAttendance!=='Keine Namen angegeben'" style="margin-top:16px;font-size:13px;color:var(--text-muted);">
+                <strong style="color:var(--text);">Anwesende:</strong> {{ formattedAttendance }}
+            </p>
+            <p class="legend">F = Familie · FK = Familie Kinder · G = Gäste · GK = Gäste Kinder · KE = Kinder im Elternschlafzimmer</p>
+
+            <div class="btn-row">
+                <button class="btn btn-secondary" @click="prevStep">← Zurück</button>
+                <button class="btn btn-pdf" @click="exportPDF(false)" :disabled="pdfGenerating">
+                    <span v-if="pdfGenerating">⏳ Erstelle PDF…</span>
+                    <span v-else>⬇ Als PDF speichern</span>
+                </button>
+                <button v-if="canShare" class="btn btn-share" @click="exportPDF(true)" :disabled="pdfGenerating">↗ Auswertung teilen</button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Admin-Bereich ────────────────────────────────────────────── -->
+    <div v-if="adminMode">
+
+        <!-- Token-Eingabe -->
+        <div class="admin-card" v-if="!adminTokenSet">
+            <div class="admin-title">Admin — Preise bearbeiten</div>
+            <p style="font-size:13px;color:var(--text-muted);line-height:1.6;margin-bottom:14px;">
+                Gib deinen GitHub Personal Access Token ein um die Preisdatei zu bearbeiten.<br>
+                Der Token wird nur für diese Sitzung gehalten und nirgendwo gespeichert.
+            </p>
+            <div style="display:flex;gap:8px;">
+                <input :type="adminShowToken?'text':'password'" v-model="adminTokenInput"
+                       placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                       @keyup.enter="adminConnect"
+                       style="flex:1;"/>
+                <button class="btn btn-secondary" @click="adminShowToken=!adminShowToken" style="padding:10px 14px;margin-top:0;width:auto;">
+                    {{ adminShowToken ? '🙈' : '👁' }}
+                </button>
+            </div>
+            <div class="admin-notice error" v-if="adminTokenError" style="margin-top:10px;">{{ adminTokenError }}</div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+                <button class="btn btn-secondary" @click="adminClose" style="margin-top:0;flex:1;">✕ Abbrechen</button>
+                <button class="btn btn-primary" @click="adminConnect" :disabled="!adminTokenInput||adminLoading" style="margin-top:0;flex:2;">
+                    <span v-if="adminLoading"><span class="spinner"></span> Verbinde…</span>
+                    <span v-else>→ Verbinden & Preise laden</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Preise bearbeiten -->
+        <div v-if="adminTokenSet">
+            <div class="admin-notice success" v-if="adminSaveSuccess">
+                ✓ Preise erfolgreich auf GitHub gespeichert!<br>
+                <span style="font-size:11px;opacity:0.85;">Bitte beachte: Es kann 5–10 Minuten dauern bis die neuen Preise in der App aktiv sind. Schließe danach den Admin-Bereich und öffne die App neu.</span>
+            </div>
+            <div class="admin-notice error"   v-if="adminSaveError">✗ Fehler beim Speichern: {{ adminSaveError }}</div>
+
+            <div class="admin-card">
+                <div class="admin-title">Preise bearbeiten</div>
+
+                <div class="admin-price-grid">
+                    <div v-for="field in adminPriceFields" :key="field.key"
+                         class="admin-price-row"
+                         :class="{changed: adminPrices[field.key] !== adminOriginalPrices[field.key]}">
+                        <span class="admin-price-label">{{ field.label }}</span>
+                        <span class="admin-price-unit">{{ field.unit }}</span>
+                        <input type="number" class="admin-price-input"
+                               v-model.number="adminPrices[field.key]"
+                               :step="field.step" min="0"/>
+                    </div>
+                </div>
+
+                <div class="admin-date-row">
+                    <span class="admin-date-label">📅 Datum in Datei</span>
+                    <input type="text" v-model="adminPrices.date" placeholder="TT.MM.JJJJ"
+                           style="width:120px;font-family:'DM Mono',monospace;font-size:13px;padding:6px 8px;"/>
+                    <button class="btn-today" @click="adminSetToday">Heute</button>
+                </div>
+
+                <div class="admin-notice warn" v-if="adminHasChanges" style="margin-top:10px;">
+                    ⚠ {{ adminChangedCount }} Wert{{ adminChangedCount > 1 ? 'e' : '' }} geändert — noch nicht gespeichert.
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:14px;">
+                    <button class="btn btn-secondary" @click="adminResetChanges" :disabled="!adminHasChanges" style="margin-top:0;flex:1;">✕ Zurücksetzen</button>
+                    <button class="btn btn-primary" @click="adminSave" :disabled="!adminHasChanges||adminSaving" style="margin-top:0;flex:2;background:#1a7f4b;">
+                        <span v-if="adminSaving"><span class="spinner"></span> Speichert…</span>
+                        <span v-else>↑ Auf GitHub speichern</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Vorschau -->
+            <div class="admin-card">
+                <div class="admin-title">Vorschau — Preise.txt</div>
+                <div class="admin-preview">{{ adminFilePreview }}</div>
+            </div>
+
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+                <button class="btn btn-secondary" @click="adminClose" style="margin-top:0;width:auto;">✕ Admin schließen</button>
+                <button style="background:none;border:none;font-size:12px;color:var(--text-muted);cursor:pointer;text-decoration:underline;"
+                        @click="adminLogout">Token löschen & abmelden</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+<script>
+Vue.createApp({
+    data() {
+        const dp = {family:7,familyKids:7,guests:12,guestKids:10,wood:20,heating:3.50,cleaning:50,kidsParentRoom:0};
+        return {
+            step:1, totalSteps:8, pdfGenerating:false, editingPrices:false,
+            pricesLoaded:false, pricesLoadError:false, pricesDate:null,
+            // Admin
+            adminMode:false,
+            adminToken:'', adminTokenInput:'', adminShowToken:false,
+            adminTokenSet:false, adminTokenError:'', adminLoading:false,
+            adminSaving:false, adminSaveSuccess:false, adminSaveError:'',
+            adminFileSha:'',
+            adminPrices:{heating:0,wood:0,family:0,familyKids:0,guests:0,guestKids:0,cleaning:0,kidsParentRoom:0,date:''},
+            adminOriginalPrices:{},
+            adminPriceFields:[
+                {key:'heating',       label:'Heizung',                      unit:'€ / Std.',    step:0.50},
+                {key:'wood',          label:'Holzkorb',                     unit:'€ / Stück',   step:1},
+                {key:'cleaning',      label:'Endreinigung',                 unit:'€ Pauschale', step:1},
+                {key:'family',        label:'Familie',                      unit:'€ / Tag',     step:0.50},
+                {key:'familyKids',    label:'Familie Kinder',               unit:'€ / Tag',     step:0.50},
+                {key:'guests',        label:'Gäste',                        unit:'€ / Tag',     step:0.50},
+                {key:'guestKids',     label:'Gäste Kinder',                 unit:'€ / Tag',     step:0.50},
+                {key:'kidsParentRoom',label:'Kinder im Elternschlafzimmer', unit:'€ / Tag',     step:0.50},
+            ],
+            owner:'', arrivalDate:'', departureDate:'',
+            heatingStart:null, heatingEnd:null, woodConsumption:0, cleaning:true,
+            extraCharges:Array(3).fill(null).map(()=>({description:'',amount:0})),
+            posten: [],
+            postenModal: { open:false, step:1, typ:'', description:'', amount:0, showError:false },
+            people:{'Familie':0,'Familie Kinder':0,'Gäste':0,'Gäste Kinder':0,'Kinder im Elternschlafzimmer':0},
+            attendance:{'Familie':[],'Familie Kinder':[],'Gäste':[],'Gäste Kinder':[],'Kinder im Elternschlafzimmer':[]},
+            defaultPrices:{...dp},
+            prices:{...dp}
+        };
+    },
+
+    async mounted() {
+        await this.loadPricesFromGitHub();
+    },
+
+    computed: {
+        adminHasChanges() {
+            return Object.keys(this.adminOriginalPrices).some(k => this.adminPrices[k] !== this.adminOriginalPrices[k]);
+        },
+        adminChangedCount() {
+            return Object.keys(this.adminOriginalPrices).filter(k => this.adminPrices[k] !== this.adminOriginalPrices[k]).length;
+        },
+        adminFilePreview() {
+            const p = this.adminPrices;
+            return `heating,${Number(p.heating).toFixed(2)}\nwood,${Number(p.wood).toFixed(2)}\nfamily,${Number(p.family).toFixed(2)}\nfamilyKids,${Number(p.familyKids).toFixed(2)}\nguests,${Number(p.guests).toFixed(2)}\nguestKids,${Number(p.guestKids).toFixed(2)}\ncleaning,${Number(p.cleaning).toFixed(2)}\nkidsParentRoom,${Number(p.kidsParentRoom).toFixed(2)}\ndate,${p.date}`;
+        },
+        pricesStatus() {
+            if(this.pricesLoadError) return {msg:'⚠ Preise konnten nicht geladen werden — Standardwerte werden verwendet',cls:'error'};
+            if(this.pricesLoaded && this.pricesDate) return {msg:`✓ Preise vom ${this.pricesDate}`,cls:'loaded'};
+            if(this.pricesLoaded)   return {msg:'✓ Preise erfolgreich aus GitHub geladen',cls:'loaded'};
+            return {msg:'Preise werden geladen…',cls:''};
+        },
+        days() {
+            if(!this.arrivalDate||!this.departureDate) return null;
+            const d=Math.ceil((new Date(this.departureDate)-new Date(this.arrivalDate))/(1000*60*60*24));
+            return d>0?d:0;
+        },
+        heatingHours() {
+            if(this.heatingStart===null||this.heatingEnd===null) return null;
+            return Math.max(0,this.heatingEnd-this.heatingStart);
+        },
+        datesValid() { return this.arrivalDate&&this.departureDate&&this.days>0; },
+        totalVisitors() { return Object.values(this.people).reduce((s,v)=>s+v,0); },
+        consumptionTotal() {
+            const postenKosten = this.posten.filter(p=>p.typ==='kosten').reduce((s,p)=>s+(Number(p.amount)||0),0);
+            const postenAusgaben = this.posten.filter(p=>p.typ==='ausgabe').reduce((s,p)=>s+(Number(p.amount)||0),0);
+            return (this.heatingHours*this.prices.heating)
+                  +(this.woodConsumption*this.prices.wood)
+                  +(this.cleaning?this.prices.cleaning:0)
+                  +postenKosten
+                  -postenAusgaben;
+        },
+        overnightTotal() {
+            return (this.people['Familie']*this.prices.family*this.days)
+                  +(this.people['Familie Kinder']*this.prices.familyKids*this.days)
+                  +(this.people['Gäste']*this.prices.guests*this.days)
+                  +(this.people['Gäste Kinder']*this.prices.guestKids*this.days)
+                  +(this.people['Kinder im Elternschlafzimmer']*this.prices.kidsParentRoom*this.days);
+        },
+        kostenTotal() {
+            return (this.heatingHours*this.prices.heating)
+                  +(this.woodConsumption*this.prices.wood)
+                  +(this.cleaning?this.prices.cleaning:0)
+                  +this.posten.filter(p=>p.typ==='kosten').reduce((s,p)=>s+p.amount,0)
+                  -this.posten.filter(p=>p.typ==='ausgabe').reduce((s,p)=>s+p.amount,0);
+        },
+        totalCost() { return this.overnightTotal + this.kostenTotal; },
+        activeExtraCharges() { return this.extraCharges.filter(e=>e.description.trim()!==''); },
+        postenKosten()  { return this.posten.filter(p=>p.typ==='kosten'); },
+        postenAusgaben(){ return this.posten.filter(p=>p.typ==='ausgabe'); },
+        pricesModified() { return Object.keys(this.defaultPrices).some(k=>this.prices[k]!==this.defaultPrices[k]); },
+        personCosts() {
+            if(this.totalVisitors===0) return [];
+            const shared=(this.heatingHours*this.prices.heating)+(this.woodConsumption*this.prices.wood)+(this.cleaning?this.prices.cleaning:0);
+            const spp=shared/this.totalVisitors;
+            return [
+                {label:'Familie',                      cost:(this.prices.family*this.days)+spp},
+                {label:'Familie Kinder',                cost:(this.prices.familyKids*this.days)+spp},
+                {label:'Gäste',                        cost:(this.prices.guests*this.days)+spp},
+                {label:'Gäste Kinder',                  cost:(this.prices.guestKids*this.days)+spp},
+                {label:'Kinder im Elternschlafzimmer',  cost:(this.prices.kidsParentRoom*this.days)+spp},
+            ].filter(c=>this.people[c.label]>0);
+        },
+        canShare() { return typeof navigator.share==='function'&&typeof navigator.canShare==='function'; },
+        formattedAttendance() {
+            const lbl={'Familie':'F','Familie Kinder':'FK','Gäste':'G','Gäste Kinder':'GK','Kinder im Elternschlafzimmer':'KE'};
+            const names=[];
+            for(const [cat,list] of Object.entries(this.attendance))
+                list.forEach(n=>{ if(n&&n.trim()) names.push(`${n.trim()} (${lbl[cat]})`); });
+            return names.length>0?names.join(', '):'Keine Namen angegeben';
+        }
+    },
+
+    methods: {
+        nextStep() { this.step++; },
+        prevStep() { if(this.step>1) this.step--; },
+        formatDate(d) { return d?new Date(d).toLocaleDateString('de-DE'):''; },
+        formatEur(v) { return Number(v).toFixed(2); },
+        increase(key) { this.people[key]++; this.attendance[key].push(''); },
+        decrease(key) { if(this.people[key]>0){ this.people[key]--; this.attendance[key].pop(); } },
+        increaseWood() { this.woodConsumption++; },
+        decreaseWood() { if(this.woodConsumption>0) this.woodConsumption--; },
+
+        async loadPricesFromGitHub() {
+            // ---------------------------------------------------------------
+            // PREISDATEI-URL — hier bei Bedarf anpassen:
+            const PREISE_URL = 'https://raw.githubusercontent.com/Mittelbergkosten/MitKo/refs/heads/main/Preise.txt';
+            // GitHub API für letztes Änderungsdatum (gleiche Repo, gleiche Datei):
+            const COMMIT_API = 'https://api.github.com/repos/Mittelbergkosten/MitKo/commits?path=Preise.txt&per_page=1';
+            // ---------------------------------------------------------------
+
+            const bust = '?t=' + Date.now(); // Cache-Busting: zwingt Browser zur frischen Anfrage
+
+            try {
+                // Preise und Commit-Datum parallel laden
+                const [resPreise, resCommit] = await Promise.allSettled([
+                    fetch(PREISE_URL + bust),
+                    fetch(COMMIT_API + '&t=' + Date.now())
+                ]);
+
+                // Preise verarbeiten
+                if(resPreise.status !== 'fulfilled' || !resPreise.value.ok)
+                    throw new Error('Preisdatei nicht erreichbar');
+                const text = await resPreise.value.text();
+                const loaded = {};
+                text.trim().split('\n').forEach(line => {
+                    const parts = line.split(',');
+                    if(parts.length >= 2) {
+                        const key = parts[0].trim();
+                        const val = parts[1].trim();
+                        if(key === 'date') {
+                            loaded['date'] = val;
+                        } else {
+                            const num = parseFloat(val);
+                            if(!isNaN(num)) loaded[key] = num;
+                        }
+                    }
+                });
+                const known = ['heating','wood','family','familyKids','guests','guestKids','cleaning','kidsParentRoom'];
+
+                // Komplette Objekte neu zuweisen damit Vue die Reaktivität sicher erkennt
+                const newPrices        = { ...this.prices };
+                const newDefaultPrices = { ...this.defaultPrices };
+                known.forEach(k => {
+                    if(loaded[k] !== undefined) {
+                        newPrices[k]        = loaded[k];
+                        newDefaultPrices[k] = loaded[k];
+                    }
+                });
+                this.prices        = newPrices;
+                this.defaultPrices = newDefaultPrices;
+                this.pricesLoaded  = true;
+                this.pricesLoadError = false;
+
+                // Datum: zuerst GitHub API versuchen, sonst date-Feld aus Datei
+                if(resCommit.status === 'fulfilled' && resCommit.value.ok) {
+                    const commits = await resCommit.value.json();
+                    if(commits.length > 0) {
+                        const d = new Date(commits[0].commit.committer.date);
+                        const datum   = d.toLocaleDateString('de-DE');
+                        const uhrzeit = d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+                        this.pricesDate = `${datum}, ${uhrzeit} Uhr`;
+                    }
+                } else if(loaded['date']) {
+                    // Fallback: date-Feld aus Preise.txt
+                    this.pricesDate = loaded['date'];
+                }
+
+            } catch(e) {
+                console.warn('Preise konnten nicht geladen werden:', e);
+                this.pricesLoadError = true;
+            }
+        },
+
+        openPostenModal() {
+            this.postenModal = { open:true, step:1, typ:'', description:'', amount:0, showError:false };
+        },
+        closePostenModal() { this.postenModal.open = false; },
+        selectPostenTyp(typ) {
+            this.postenModal.typ = typ;
+            this.postenModal.step = 2;
+            this.$nextTick(() => { this.$refs.postenDesc && this.$refs.postenDesc.focus(); });
+        },
+        savePosten() {
+            if(!this.postenModal.description.trim() || !this.postenModal.amount) {
+                this.postenModal.showError = true;
+                return;
+            }
+            this.posten.push({
+                typ: this.postenModal.typ,
+                description: this.postenModal.description.trim(),
+                amount: Number(this.postenModal.amount)
+            });
+            this.postenModal.open = false;
+        },
+        deletePosten(index) { this.posten.splice(index, 1); },
+
+        // ── Admin Methoden ───────────────────────────────────────────────
+        async adminConnect() {
+            if(!this.adminTokenInput.trim()) return;
+            this.adminLoading = true;
+            this.adminTokenError = '';
+            try {
+                // ─────────────────────────────────────────────────────────
+                // REPO & DATEIPFAD — hier bei Bedarf anpassen:
+                const OWNER = 'Mittelbergkosten', REPO = 'MitKo', PATH = 'Preise.txt';
+                // ─────────────────────────────────────────────────────────
+                const res = await fetch(
+                    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`,
+                    { headers: { Authorization: `token ${this.adminTokenInput.trim()}`, Accept: 'application/vnd.github.v3+json' } }
+                );
+                if(res.status === 401) throw new Error('Token ungültig oder abgelaufen.');
+                if(res.status === 404) throw new Error('Datei nicht gefunden.');
+                if(!res.ok) throw new Error(`GitHub Fehler: HTTP ${res.status}`);
+                const data = await res.json();
+                this.adminFileSha = data.sha;
+                this.adminToken   = this.adminTokenInput.trim();
+                this.adminTokenSet = true;
+                const content = atob(data.content.replace(/\n/g,''));
+                this.adminParsePriceFile(content);
+            } catch(e) {
+                this.adminTokenError = e.message;
+            } finally {
+                this.adminLoading = false;
+            }
+        },
+
+        adminParsePriceFile(text) {
+            const p = {...this.adminPrices};
+            text.trim().split('\n').forEach(line => {
+                const parts = line.split(',');
+                if(parts.length >= 2) {
+                    const key = parts[0].trim(), val = parts[1].trim();
+                    if(key === 'date') { p.date = val; }
+                    else { const num = parseFloat(val); if(!isNaN(num) && key in p) p[key] = num; }
+                }
+            });
+            this.adminPrices = {...p};
+            this.adminOriginalPrices = {...p};
+        },
+
+        adminSetToday() {
+            const d = new Date();
+            this.adminPrices.date = `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`;
+        },
+
+        adminResetChanges() { this.adminPrices = {...this.adminOriginalPrices}; },
+
+        async adminSave() {
+            this.adminSaving = true;
+            this.adminSaveSuccess = false;
+            this.adminSaveError = '';
+            try {
+                // ─────────────────────────────────────────────────────────
+                // REPO & DATEIPFAD — hier bei Bedarf anpassen:
+                const OWNER = 'Mittelbergkosten', REPO = 'MitKo', PATH = 'Preise.txt';
+                // ─────────────────────────────────────────────────────────
+                const res = await fetch(
+                    `https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`,
+                    {
+                        method: 'PUT',
+                        headers: { Authorization: `token ${this.adminToken}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: `Preise aktualisiert (${this.adminPrices.date || new Date().toLocaleDateString('de-DE')})`,
+                            content: btoa(this.adminFilePreview + '\n'),
+                            sha: this.adminFileSha
+                        })
+                    }
+                );
+                if(!res.ok) { const err = await res.json(); throw new Error(err.message || `HTTP ${res.status}`); }
+                const data = await res.json();
+                this.adminFileSha = data.content.sha;
+                this.adminOriginalPrices = {...this.adminPrices};
+                this.adminSaveSuccess = true;
+            } catch(e) {
+                this.adminSaveError = e.message;
+            } finally {
+                this.adminSaving = false;
+            }
+        },
+
+        adminClose() {
+            this.adminMode = false;
+        },
+
+        adminLogout() {
+            this.adminToken = '';
+            this.adminTokenInput = '';
+            this.adminTokenSet = false;
+            this.adminFileSha = '';
+            this.adminSaveSuccess = false;
+            this.adminSaveError = '';
+            this.adminTokenError = '';
+            this.adminMode = false;
+        },
+        // ── Ende Admin Methoden ──────────────────────────────────────────
+
+        async exportPDF(share=false) {
+            this.pdfGenerating=true;
+            await new Promise(r=>setTimeout(r,50));
+            try {
+                const {jsPDF}=window.jspdf;
+                const doc=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+                const acc=[124,92,252], warn=[200,120,20];
+                const pageW=210, margin=12, colW=pageW-margin*2;
+
+                const mkHead=(cells,styles)=>[cells.map((txt,i)=>({content:txt,styles:{halign:styles[i]?.halign||'left'}}))];
+                const base=(startY,head,body,colStyles,extra={})=>({
+                    startY,head,body,theme:'plain',
+                    styles:{fontSize:7.5,cellPadding:1.4,textColor:[30,30,30]},
+                    headStyles:{fillColor:acc,textColor:255,fontStyle:'bold',fontSize:7.5,cellPadding:1.6},
+                    columnStyles:colStyles,
+                    margin:{left:margin,right:margin},
+                    alternateRowStyles:{fillColor:[248,248,248]},
+                    ...extra
+                });
+
+                const modifiedAndSubtotal=(body,subIdx,modifiedRows)=>(d)=>{
+                    if(d.section!=='body') return;
+                    if(modifiedRows && modifiedRows.includes(d.row.index)) d.cell.styles.textColor=warn;
+                    if(d.row.index===subIdx){
+                        d.cell.styles.fontStyle='bold';
+                        d.cell.styles.fillColor=[235,235,235];
+                        d.cell.styles.textColor=[60,60,60];
+                    }
+                };
+                const lastAccent=(body)=>(d)=>{
+                    if(d.section==='body'&&d.row.index===body.length-1){
+                        d.cell.styles.fontStyle='bold';
+                        d.cell.styles.fillColor=[240,236,255];
+                        d.cell.styles.textColor=acc;
+                    }
+                };
+
+                let y=0;
+
+                // Header
+                doc.setFillColor(...acc);
+                doc.rect(0,0,pageW,16,'F');
+                doc.setTextColor(255,255,255);
+                doc.setFontSize(12); doc.setFont('helvetica','bold');
+                doc.text('MitKo — Abrechnung',margin,10.5);
+                doc.setFontSize(7.5); doc.setFont('helvetica','normal');
+                doc.text(`${this.owner}  ·  ${this.formatDate(this.arrivalDate)} – ${this.formatDate(this.departureDate)}  ·  ${new Date().toLocaleDateString('de-DE')}`,pageW-margin,10.5,{align:'right'});
+                if(this.pricesModified){
+                    doc.setFillColor(245,166,35);
+                    doc.rect(0,16,pageW,5,'F');
+                    doc.setTextColor(80,50,0);
+                    doc.setFontSize(7);
+                    doc.text('⚠  Preise wurden für diese Abrechnung manuell angepasst — geänderte Positionen sind mit * markiert.',margin,19.5);
+                }
+                y=this.pricesModified?25:20;
+
+                // Stammdaten | Personen (2 Spalten)
+                const halfW=90, rightX=margin+halfW+6;
+                doc.autoTable(base(y,
+                    mkHead(['Stammdaten',''],[{halign:'left'},{halign:'right'}]),
+                    [['Tage',`${this.days}`],['Heizung Ankunft',`${this.heatingStart} Std.`],['Heizung Abfahrt',`${this.heatingEnd} Std.`],['Heizstunden',`${this.heatingHours} Std.`],['Holzkörbe',`${this.woodConsumption}`],['Endreinigung',this.cleaning?'Ja':'Nein']],
+                    {0:{halign:'left',cellWidth:52,fontStyle:'bold'},1:{halign:'right',cellWidth:38}},
+                    {margin:{left:margin,right:pageW-margin-halfW}}
+                ));
+                const leftY=doc.lastAutoTable.finalY;
+                const personRows=Object.entries(this.people).filter(([,v])=>v>0).map(([k,v])=>[k,`${v}`]);
+                personRows.push(['Gesamt',`${this.totalVisitors}`]);
+                doc.autoTable({
+                    ...base(y,mkHead(['Personen','Anz.'],[{halign:'left'},{halign:'right'}]),personRows,
+                        {0:{halign:'left',cellWidth:72},1:{halign:'right',cellWidth:18}},
+                        {margin:{left:rightX,right:pageW-rightX-halfW}}),
+                    didParseCell:lastAccent(personRows)
+                });
+                y=Math.max(leftY,doc.lastAutoTable.finalY)+5;
+
+                const cS={0:{halign:'left',cellWidth:76},1:{halign:'right',cellWidth:44},2:{halign:'right',cellWidth:33},3:{halign:'right',cellWidth:33}};
+
+                // ── Übernachtungstabelle ─────────────────────────────────
+                const oMod=[];
+                const overnightBody=[];
+                const personMap=[
+                    ['Familie','family','Familie'],
+                    ['Familie Kinder','familyKids','Familie Kinder'],
+                    ['Gäste','guests','Gäste'],
+                    ['Gäste Kinder','guestKids','Gäste Kinder'],
+                    ['Kinder Elternzimmer','kidsParentRoom','Kinder im Elternschlafzimmer'],
+                ];
+                personMap.forEach(([label,key,pKey])=>{
+                    const count=this.people[pKey];
+                    if(count>0){
+                        if(this.prices[key]!==this.defaultPrices[key]) oMod.push(overnightBody.length);
+                        overnightBody.push([label+(this.prices[key]!==this.defaultPrices[key]?' *':''),`${count} × ${this.days} T.`,this.formatEur(this.prices[key]),this.formatEur(count*this.prices[key]*this.days)]);
+                    }
+                });
+                overnightBody.push(['Zwischensumme Übernachtung','','',this.formatEur(this.overnightTotal)]);
+                doc.autoTable({
+                    ...base(y,mkHead(['Übernachtung','Menge','EP (€)','GP (€)'],[{halign:'left'},{halign:'right'},{halign:'right'},{halign:'right'}]),overnightBody,cS,{margin:{left:margin,right:margin},tableWidth:colW}),
+                    didParseCell:modifiedAndSubtotal(overnightBody,overnightBody.length-1,oMod)
+                });
+                y=doc.lastAutoTable.finalY+4;
+
+                // ── Kosten & Ausgaben Tabelle ────────────────────────────
+                const cMod=[];
+                const kostenBody=[];
+                if(this.heatingHours>0){
+                    if(this.prices.heating!==this.defaultPrices.heating) cMod.push(kostenBody.length);
+                    kostenBody.push(['Heizung'+(this.prices.heating!==this.defaultPrices.heating?' *':''),`${this.heatingHours} Std.`,this.formatEur(this.prices.heating),this.formatEur(this.heatingHours*this.prices.heating)]);
+                }
+                if(this.woodConsumption>0){
+                    if(this.prices.wood!==this.defaultPrices.wood) cMod.push(kostenBody.length);
+                    kostenBody.push(['Holzkörbe'+(this.prices.wood!==this.defaultPrices.wood?' *':''),`${this.woodConsumption}`,this.formatEur(this.prices.wood),this.formatEur(this.woodConsumption*this.prices.wood)]);
+                }
+                if(this.cleaning){
+                    if(this.prices.cleaning!==this.defaultPrices.cleaning) cMod.push(kostenBody.length);
+                    kostenBody.push(['Endreinigung'+(this.prices.cleaning!==this.defaultPrices.cleaning?' *':''),'1',this.formatEur(this.prices.cleaning),this.formatEur(this.prices.cleaning)]);
+                }
+                this.postenKosten.forEach(p=>kostenBody.push([p.description+' (+)','—','—','+'+this.formatEur(p.amount)]));
+                const ausgabenStartIdx=kostenBody.length;
+                this.postenAusgaben.forEach(p=>kostenBody.push([p.description,'—','—','-'+this.formatEur(p.amount)]));
+                kostenBody.push(['Zwischensumme Kosten & Ausgaben','','',this.formatEur(this.kostenTotal)]);
+
+                doc.autoTable({
+                    ...base(y,mkHead(['Kosten & Ausgaben','Menge','EP (€)','GP (€)'],[{halign:'left'},{halign:'right'},{halign:'right'},{halign:'right'}]),kostenBody,cS,{margin:{left:margin,right:margin},tableWidth:colW}),
+                    didParseCell:(d)=>{
+                        if(d.section!=='body') return;
+                        // Geänderte Preise orange
+                        if(cMod.includes(d.row.index)) d.cell.styles.textColor=warn;
+                        // Ausgaben: nur GP-Spalte rot
+                        if(d.row.index>=ausgabenStartIdx && d.row.index<kostenBody.length-1 && d.column.index===3) d.cell.styles.textColor=[200,50,50];
+                        // Zwischensumme
+                        if(d.row.index===kostenBody.length-1){
+                            d.cell.styles.fontStyle='bold';
+                            d.cell.styles.fillColor=[235,235,235];
+                            d.cell.styles.textColor=[60,60,60];
+                        }
+                    }
+                });
+                y=doc.lastAutoTable.finalY+4;
+
+                // ── Gesamttabelle ────────────────────────────────────────
+                const totalBody=[
+                    ['Übernachtung',this.formatEur(this.overnightTotal)],
+                    ['Kosten & Ausgaben',this.formatEur(this.kostenTotal)],
+                    ['GESAMT',this.formatEur(this.totalCost)]
+                ];
+                doc.autoTable({
+                    ...base(y,mkHead(['Gesamtrechnung','(€)'],[{halign:'left'},{halign:'right'}]),totalBody,
+                        {0:{halign:'left',cellWidth:colW-40},1:{halign:'right',cellWidth:40}},
+                        {margin:{left:margin,right:margin},tableWidth:colW}),
+                    didParseCell:lastAccent(totalBody)
+                });
+                y=doc.lastAutoTable.finalY+4;
+
+                // Kosten pro Person
+                if(this.totalVisitors>0){
+                    const ppRows=this.personCosts.map(c=>[c.label,`${this.formatEur(c.cost)} €`]);
+                    if(ppRows.length>0){
+                        doc.autoTable(base(y,mkHead(['Kosten pro Person',''],[{halign:'left'},{halign:'right'}]),ppRows,{0:{halign:'left',cellWidth:62},1:{halign:'right',cellWidth:28}},{margin:{left:margin,right:pageW-margin-halfW},tableWidth:halfW}));
+                        y=doc.lastAutoTable.finalY+4;
+                    }
+                }
+
+                // Anwesenheit & Legende
+                if(this.formattedAttendance!=='Keine Namen angegeben'){
+                    doc.setFontSize(7); doc.setTextColor(140,140,140);
+                    doc.text(`Anwesende: ${this.formattedAttendance}`,margin,y,{maxWidth:colW});
+                    y+=4;
+                }
+                doc.setFontSize(6.5); doc.setTextColor(160,160,160);
+                doc.text('F=Familie · FK=Familie Kinder · G=Gäste · GK=Gäste Kinder · KE=Kinder Elternzimmer'+(this.pricesModified?' | * = Preis manuell angepasst':''),margin,y,{maxWidth:colW});
+
+                // Footer
+                doc.setFontSize(7); doc.setTextColor(180,180,180);
+                doc.text(`MitKo — ${this.owner} — ${this.formatDate(this.arrivalDate)} bis ${this.formatDate(this.departureDate)}`,pageW/2,289,{align:'center'});
+
+                const filename=`MitKo_${this.owner}_${this.arrivalDate}.pdf`;
+                if(share){
+                    const file=new File([doc.output('blob')],filename,{type:'application/pdf'});
+                    if(navigator.canShare({files:[file]})){
+                        await navigator.share({title:`MitKo Abrechnung — ${this.owner}`,text:`Abrechnung ${this.formatDate(this.arrivalDate)} – ${this.formatDate(this.departureDate)}`,files:[file]});
+                    } else { doc.save(filename); }
+                } else { doc.save(filename); }
+
+            } catch(e){
+                if(e.name!=='AbortError'){ alert('PDF-Export fehlgeschlagen: '+e.message); console.error(e); }
+            } finally { this.pdfGenerating=false; }
+        }
+    }
+}).mount('#app');
+</script>
+</body>
+</html>
